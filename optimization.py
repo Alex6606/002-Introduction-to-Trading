@@ -8,7 +8,7 @@ import numpy as np
 import optuna
 from backtest import run_backtest
 
-def optimize_parameters(train_w, valid_w, n_trials=15):
+def optimize_parameters(train_w, valid_w, n_trials=50):
     """
     Optuna: optimiza parámetros para una ventana.
     """
@@ -23,15 +23,15 @@ def optimize_parameters(train_w, valid_w, n_trials=15):
             "n_shares": trial.suggest_float("n_shares", 0.001, 5),
         }
 
-        _, m_train = run_backtest(train_w, params, 1_000_000, 0.00125)
-        _, m_valid = run_backtest(valid_w, params, 1_000_000, 0.00125)
-        return 0.7 * m_train["Calmar"] + 0.3 * m_valid["Calmar"]
+        _, m_train,_ = run_backtest(train_w, params, 1_000_000, 0.00125)
+        _, m_valid,_ = run_backtest(valid_w, params, 1_000_000, 0.00125)
+        return 0.4 * m_train["Calmar"] + 0.6 * m_valid["Calmar"]
 
     study = optuna.create_study(direction="maximize")
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
     return study.best_params
 
-def walk_forward_optimization(data, window_frac=0.4, step_frac=0.1, n_trials=15):
+def walk_forward_optimization(data, window_frac=0.4, step_frac=0.1, n_trials=50):
     """
     Walk-Forward promediado con Optuna.
     """

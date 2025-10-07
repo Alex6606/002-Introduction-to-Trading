@@ -36,24 +36,8 @@ def run_backtest(data, params, initial_capital, com):
 
     df = data.copy()
 
-    # === Indicadores técnicos ===
-    df['rsi'] = ta.momentum.RSIIndicator(df['Close'], window=rsi_window).rsi()
-    df['signal_rsi_long'] = df['rsi'] < rsi_lower
-    df['signal_rsi_short'] = df['rsi'] > (100 - rsi_lower)
-
-    macd = ta.trend.MACD(df['Close'])
-    df['signal_macd_long'] = macd.macd() > macd.macd_signal()
-    df['signal_macd_short'] = macd.macd() < macd.macd_signal()
-
-    df['ema_fast'] = ta.trend.EMAIndicator(df['Close'], window=ema_fast).ema_indicator()
-    df['ema_slow'] = ta.trend.EMAIndicator(df['Close'], window=ema_slow).ema_indicator()
-    df['signal_ema_long'] = df['ema_fast'] > df['ema_slow']
-    df['signal_ema_short'] = df['ema_fast'] < df['ema_slow']
-
-    # === Señales combinadas ===
-    df['buy_signal'] = df[['signal_rsi_long', 'signal_macd_long', 'signal_ema_long']].sum(axis=1) >= 2
-    df['sell_signal'] = df[['signal_rsi_short', 'signal_macd_short', 'signal_ema_short']].sum(axis=1) >= 2
-    df = df.dropna()
+    from indicators import add_indicators
+    df = add_indicators(df,rsi_window,rsi_lower, ema_fast, ema_slow)
 
     # === Backtest ===
     active_positions = []
@@ -109,7 +93,7 @@ def run_backtest(data, params, initial_capital, com):
     cummax = df_portfolio['Value'].cummax()
     drawdown = (df_portfolio['Value'] - cummax) / cummax
     max_dd = drawdown.min()
-    calmar = abs(annual_rets / max_dd) if max_dd else 0
+    calmar = annual_rets / abs(max_dd) if max_dd else 0
 
     metrics = {
         "Sharpe": sharpe, "Sortino": sortino, "Calmar": calmar,
@@ -117,4 +101,4 @@ def run_backtest(data, params, initial_capital, com):
         "WinRate": (rets > 0).sum() / len(rets) if len(rets) else 0
     }
 
-    return df_portfolio['Value'], metrics
+    return df_portfolio['Value'], metrics, df
